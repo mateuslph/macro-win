@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri_plugin_notification::NotificationExt;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -126,17 +127,29 @@ fn verificar_autostart_admin() -> bool {
 
 // NOVA FUNÇÃO: Executar o arquivo .bat imediatamente e de forma oculta
 #[tauri::command]
-fn executar_macro_agora(caminho_bat: String) -> Result<(), String> {
+fn executar_macro_agora(app: tauri::AppHandle, caminho_bat: String) -> Result<(), String> {
     let mut cmd = Command::new("cmd");
     cmd.args(["/C", &caminho_bat]);
+    
     #[cfg(target_os = "windows")] { cmd.creation_flags(0x08000000); }
+    
     let _ = cmd.output().map_err(|e| e.to_string())?;
+
+    // Dispara o balão de notificação nativo do Windows
+    let _ = app.notification()
+        .builder()
+        .title("MacroWin")
+        .body("Macro testada com sucesso!")
+        .show();
+
     Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+    tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init()) 
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--autostart"])))
         .setup(|app| {
