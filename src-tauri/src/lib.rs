@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -98,6 +99,50 @@ fn deletar_macro(app: tauri::AppHandle, id: String, definitivo: bool) -> Result<
     Ok(())
 }
 
+#[tauri::command]
+fn alternar_autostart_admin(ativar: bool) -> Result<(), String> {
+    let mut cmd = Command::new("schtasks");
+    
+    if ativar {
+        let exe_path = env::current_exe().map_err(|e| e.to_string())?;
+        let comando = format!("\"{}\" --autostart", exe_path.display());
+
+        cmd.args([
+            "/Create", "/F", 
+            "/TN", "MacroWin_SystemAutostart", 
+            "/TR", &comando, 
+            "/SC", "ONLOGON", 
+            "/RL", "HIGHEST" // Roda elevado como Admin sem pedir UAC no boot
+        ]);
+    } else {
+        cmd.args(["/Delete", "/F", "/TN", "MacroWin_SystemAutostart"]);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(0x08000000);
+    }
+
+    let _ = cmd.output().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn verificar_autostart_admin() -> bool {
+    let mut cmd = Command::new("schtasks");
+    cmd.args(["/Query", "/TN", "MacroWin_SystemAutostart"]);
+    
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(0x08000000);
+    }
+
+    match cmd.output() {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -131,7 +176,7 @@ pub fn run() {
                 .build(app)?;
 
             if let Some(window) = app.get_webview_window("main") {
-                let args: Vec<String> = std::env::args().collect();
+                let args: Vec<String> = env::args().collect();
                 if !args.contains(&"--autostart".to_string()) {
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -155,7 +200,13 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![listar_macros, salvar_macro, deletar_macro])
+        .invoke_handler(tauri::generate_handler![
+            listar_macros, 
+            salvar_macro, 
+            deletar_macro, 
+            alternar_autostart_admin, 
+            verificar_autostart_admin
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
