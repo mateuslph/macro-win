@@ -6,11 +6,15 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows_10_%2F_11-0078D6?logo=windows&logoColor=white)](https://microsoft.com)
 
-**MacroWin** é uma aplicação desktop de alta performance desenvolvida para gerenciar, agendar e executar scripts `.bat` e `.cmd` no Windows de forma totalmente oculta (sem exibição de telas pretas do CMD). 
+**MacroWin** é uma aplicação desktop de alta performance desenvolvida para gerenciar, agendar e executar scripts `.bat` e `.cmd` no Windows de forma totalmente oculta (sem exibição de telas pretas do CMD). Projetado com arquitetura híbrida **Tauri v2 + Rust** no backend e **React + TypeScript** no frontend, o sistema integra-se nativamente ao Agendador de Tarefas do Windows (`schtasks`), à Bandeja do Sistema (*System Tray*) e conta com controle de persistência em lixeira temporal de 30 dias.
 
-Projetado com arquitetura híbrida **Tauri v2 + Rust** no backend e **React + TypeScript** no frontend, o sistema integra-se nativamente ao Agendador de Tarefas do Windows (`schtasks`), à Bandeja do Sistema (*System Tray*) e conta com controle de persistência em lixeira temporal de 30 dias.
+## Imagens do projeto ```macro-win``` aberto no Windows 11:
 
----
+<br>
+
+<img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_01.png" alt="Texto alternativo" width="500" height="250"> <img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_02.png" alt="Texto alternativo" width="500" height="250">
+
+<br> <br>
 
 ## 🚀 Funcionalidades Principais
 
