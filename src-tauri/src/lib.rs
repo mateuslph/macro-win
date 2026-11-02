@@ -31,7 +31,6 @@ fn ler_db(app: &tauri::AppHandle) -> Vec<MacroItem> {
         let mut macros: Vec<MacroItem> = serde_json::from_str(&data).unwrap_or_default();
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let trinta_dias = 30 * 24 * 60 * 60;
-        // Retém apenas macros ativas ou na lixeira há menos de 30 dias
         macros.retain(|m| m.deletada_em.map_or(true, |d| now - d < trinta_dias));
         let _ = fs::write(db_path(app), serde_json::to_string(&macros).unwrap());
         macros
@@ -50,23 +49,20 @@ fn salvar_macro(app: tauri::AppHandle, id: String, caminho_bat: String, horario:
     let mut macros = ler_db(&app);
     macros.retain(|m| m.id != id);
 
-    // 1. Cria o VBScript "Ocultador" se ele ainda não existir na pasta do app
     let dir_app = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
     let _ = fs::create_dir_all(&dir_app);
     let vbs_path = dir_app.join("oculto.vbs");
     
     if !vbs_path.exists() {
-        // O zero (0) no final do comando VBS significa janela 100% oculta
         let vbs_code = "CreateObject(\"WScript.Shell\").Run chr(34) & WScript.Arguments(0) & chr(34), 0, False";
         let _ = fs::write(&vbs_path, vbs_code);
     }
 
-    // 2. Configura o Agendador para rodar o WScript invisível, que por sua vez roda o seu .bat
     let comando_invisivel = format!("wscript.exe //B \"{}\" \"{}\"", vbs_path.display(), caminho_bat);
 
     let mut cmd = Command::new("schtasks");
     cmd.args(["/Create", "/F", "/TN", &format!("MacroWin\\{}", id)]);
-    cmd.args(["/TR", &comando_invisivel]); // <- Usa o VBS aqui
+    cmd.args(["/TR", &comando_invisivel]);
     
     if ao_iniciar {
         cmd.args(["/SC", "ONLOGON"]);
@@ -102,27 +98,20 @@ fn deletar_macro(app: tauri::AppHandle, id: String, definitivo: bool) -> Result<
 #[tauri::command]
 fn alternar_autostart_admin(ativar: bool) -> Result<(), String> {
     let mut cmd = Command::new("schtasks");
-    
     if ativar {
         let exe_path = env::current_exe().map_err(|e| e.to_string())?;
         let comando = format!("\"{}\" --autostart", exe_path.display());
-
         cmd.args([
             "/Create", "/F", 
             "/TN", "MacroWin_SystemAutostart", 
             "/TR", &comando, 
             "/SC", "ONLOGON", 
-            "/RL", "HIGHEST" // Roda elevado como Admin sem pedir UAC no boot
+            "/RL", "HIGHEST"
         ]);
     } else {
         cmd.args(["/Delete", "/F", "/TN", "MacroWin_SystemAutostart"]);
     }
-
-    #[cfg(target_os = "windows")]
-    {
-        cmd.creation_flags(0x08000000);
-    }
-
+    #[cfg(target_os = "windows")] { cmd.creation_flags(0x08000000); }
     let _ = cmd.output().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -131,16 +120,18 @@ fn alternar_autostart_admin(ativar: bool) -> Result<(), String> {
 fn verificar_autostart_admin() -> bool {
     let mut cmd = Command::new("schtasks");
     cmd.args(["/Query", "/TN", "MacroWin_SystemAutostart"]);
-    
-    #[cfg(target_os = "windows")]
-    {
-        cmd.creation_flags(0x08000000);
-    }
+    #[cfg(target_os = "windows")] { cmd.creation_flags(0x08000000); }
+    match cmd.output() { Ok(output) => output.status.success(), Err(_) => false }
+}
 
-    match cmd.output() {
-        Ok(output) => output.status.success(),
-        Err(_) => false,
-    }
+// NOVA FUNÇÃO: Executar o arquivo .bat imediatamente e de forma oculta
+#[tauri::command]
+fn executar_macro_agora(caminho_bat: String) -> Result<(), String> {
+    let mut cmd = Command::new("cmd");
+    cmd.args(["/C", &caminho_bat]);
+    #[cfg(target_os = "windows")] { cmd.creation_flags(0x08000000); }
+    let _ = cmd.output().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -187,12 +178,12 @@ pub fn run() {
                 
                 window.on_window_event(move |event| match event {
                     tauri::WindowEvent::CloseRequested { api, .. } => {
-                        api.prevent_close(); // Impede o fechamento total
-                        let _ = w_clone1.hide(); // Oculta na bandeja
+                        api.prevent_close(); 
+                        let _ = w_clone1.hide(); 
                     }
                     tauri::WindowEvent::Resized(_) => {
                         if w_clone2.is_minimized().unwrap_or(false) {
-                            let _ = w_clone2.hide(); // Oculta na bandeja ao minimizar
+                            let _ = w_clone2.hide(); 
                         }
                     }
                     _ => {}
@@ -205,7 +196,8 @@ pub fn run() {
             salvar_macro, 
             deletar_macro, 
             alternar_autostart_admin, 
-            verificar_autostart_admin
+            verificar_autostart_admin,
+            executar_macro_agora // <- Registrado para o React acessar
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

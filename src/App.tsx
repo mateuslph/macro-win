@@ -21,18 +21,15 @@ function App() {
 
   useEffect(() => { 
     carregarMacros(); 
-    // Verifica diretamente com o Windows se o schtasks tem a regra Admin ativa
     invoke<boolean>("verificar_autostart_admin").then(setIniciarComWindows);
   }, [aba]);
 
   const handleToggleWindows = async (checked: boolean) => {
     setIniciarComWindows(checked);
     try {
-      // Solicita ao Rust para injetar ou remover a regra "/RL HIGHEST"
       await invoke("alternar_autostart_admin", { ativar: checked });
     } catch (err) {
       console.error("Erro ao configurar autostart admin:", err);
-      // Se der erro, desfaz visualmente a ação para manter a consistência
       setIniciarComWindows(!checked);
     }
   };
@@ -63,6 +60,16 @@ function App() {
     carregarMacros();
   };
 
+  // NOVA FUNÇÃO: Aciona o backend para testar a macro na hora
+  const testarMacro = async (caminhoBat: string) => {
+    try {
+      await invoke("executar_macro_agora", { caminhoBat });
+    } catch (err) {
+      console.error("Erro ao testar macro:", err);
+      alert("Erro ao executar a macro: " + err);
+    }
+  };
+
   const ativas = macros.filter(m => m.deletada_em === null);
   const lixeira = macros.filter(m => m.deletada_em !== null);
 
@@ -72,7 +79,7 @@ function App() {
       
       <div className="autostart-toggle">
         <input type="checkbox" id="auto" checked={iniciarComWindows} onChange={(e) => handleToggleWindows(e.target.checked)} />
-        <label htmlFor="auto">Iniciar Gerenciador oculto com o Windows (Administrador)</label>
+        <label htmlFor="auto">Iniciar Gerenciador oculto com o Windows (Admin)</label>
       </div>
 
       <div className="tabs">
@@ -98,8 +105,9 @@ function App() {
         <div key={m.id} className="card item">
           <p><strong>{m.caminho_bat.split('\\').pop()}</strong> - {m.ao_iniciar ? "No boot" : m.horario}</p>
           <div className="actions">
-            <button onClick={() => editarMacro(m)}>✏️</button>
-            <button onClick={() => acaoMacro(m.id, "lixeira")}>🗑️</button>
+            <button onClick={() => testarMacro(m.caminho_bat)} title="Testar agora">▶️</button>
+            <button onClick={() => editarMacro(m)} title="Editar">✏️</button>
+            <button onClick={() => acaoMacro(m.id, "lixeira")} title="Excluir">🗑️</button>
           </div>
         </div>
       ))}
