@@ -147,8 +147,7 @@ fn executar_macro_agora(app: tauri::AppHandle, caminho_bat: String) -> Result<()
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-    tauri::Builder::default()
+    tauri::Builder::default() // <- Removida a linha duplicada
         .plugin(tauri_plugin_notification::init()) 
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--autostart"])))
