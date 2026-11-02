@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import "./App.css";
 
 type Macro = { id: string, caminho_bat: string, horario: string, ao_iniciar: boolean, deletada_em: number | null };
@@ -22,21 +21,28 @@ function App() {
 
   useEffect(() => { 
     carregarMacros(); 
-    isEnabled().then(setIniciarComWindows);
+    // Verifica diretamente com o Windows se o schtasks tem a regra Admin ativa
+    invoke<boolean>("verificar_autostart_admin").then(setIniciarComWindows);
   }, [aba]);
 
   const handleToggleWindows = async (checked: boolean) => {
     setIniciarComWindows(checked);
-    if (checked) await enable(); else await disable();
+    try {
+      // Solicita ao Rust para injetar ou remover a regra "/RL HIGHEST"
+      await invoke("alternar_autostart_admin", { ativar: checked });
+    } catch (err) {
+      console.error("Erro ao configurar autostart admin:", err);
+      // Se der erro, desfaz visualmente a ação para manter a consistência
+      setIniciarComWindows(!checked);
+    }
   };
 
- const selecionarArquivo = async () => {
-  const selected = await open({ filters: [{ name: 'Scripts', extensions: ['bat', 'cmd'] }] });
-  // Se retornou algo e é uma string (caminho do arquivo), salva no estado
-  if (typeof selected === 'string') {
-    setCaminhoBat(selected);
-  }
-};
+  const selecionarArquivo = async () => {
+    const selected = await open({ filters: [{ name: 'Scripts', extensions: ['bat', 'cmd'] }] });
+    if (typeof selected === 'string') {
+      setCaminhoBat(selected);
+    }
+  };
 
   const handleSalvar = async () => {
     const id = editId || "Macro_" + Date.now();
@@ -66,7 +72,7 @@ function App() {
       
       <div className="autostart-toggle">
         <input type="checkbox" id="auto" checked={iniciarComWindows} onChange={(e) => handleToggleWindows(e.target.checked)} />
-        <label htmlFor="auto">Iniciar Gerenciador oculto com o Windows</label>
+        <label htmlFor="auto">Iniciar Gerenciador oculto com o Windows (Administrador)</label>
       </div>
 
       <div className="tabs">
