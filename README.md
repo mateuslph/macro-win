@@ -8,7 +8,7 @@
 
 **MacroWin** é uma aplicação desktop de alta performance desenvolvida para gerenciar, agendar e executar scripts `.bat` e `.cmd` no Windows de forma totalmente oculta (sem exibição de telas pretas do CMD). Projetado com arquitetura híbrida **Tauri v2 + Rust** no backend e **React + TypeScript** no frontend, o sistema integra-se nativamente ao Agendador de Tarefas do Windows (`schtasks`), à Bandeja do Sistema (*System Tray*) e conta com controle de persistência em lixeira temporal de 30 dias.
 
-## Imagens do projeto ```macro-win``` aberto no Windows 11:
+## Imagens do software ```macro-win``` aberto no Windows 11:
 
 <br>
 <img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_02.png" alt="imagem do projeto aberto no Windows 11" width="500" height="250">
