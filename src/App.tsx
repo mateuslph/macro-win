@@ -15,22 +15,35 @@ function App() {
   const [aoIniciar, setAoIniciar] = useState(false);
 
   const carregarMacros = async () => {
-    const data: Macro[] = await invoke("listar_macros");
-    setMacros(data);
+    try {
+      const data: Macro[] = await invoke("listar_macros");
+      setMacros(data);
+    } catch (e) {
+      console.error("Erro ao carregar macros:", e);
+    }
   };
 
+  // 1. Verificar o status assim que o App abrir
   useEffect(() => { 
     carregarMacros(); 
-    invoke<boolean>("verificar_autostart_admin").then(setIniciarComWindows);
+    invoke<boolean>("verificar_autostart_admin")
+      .then((ativo) => setIniciarComWindows(ativo))
+      .catch((e) => console.error("Erro ao verificar autostart:", e));
   }, [aba]);
 
+  // 2. Lidar com o clique na caixa de seleção com tratamento de erro e reversão
   const handleToggleWindows = async (checked: boolean) => {
-    setIniciarComWindows(checked);
+    setIniciarComWindows(checked); // Guarda a intenção do usuário visualmente
+    
     try {
       await invoke("alternar_autostart_admin", { ativar: checked });
-    } catch (err) {
-      console.error("Erro ao configurar autostart admin:", err);
+      console.log("Configuração salva com sucesso!");
+    } catch (erro_do_rust) {
+      // Se o Rust retornar um Err(), desfazemos a ação na interface para refletir a realidade
       setIniciarComWindows(!checked);
+      
+      // Exibe o erro na tela para o usuário saber por que não marcou
+      alert("Privilégios Insuficientes / Erro no Windows:\n\n" + erro_do_rust);
     }
   };
 
@@ -43,24 +56,37 @@ function App() {
 
   const handleSalvar = async () => {
     const id = editId || "Macro_" + Date.now();
-    await invoke("salvar_macro", { id, caminhoBat, horario, aoIniciar });
-    setEditId(null); setCaminhoBat(""); setAba("ativas");
+    try {
+      await invoke("salvar_macro", { id, caminhoBat, horario, aoIniciar });
+      setEditId(null); 
+      setCaminhoBat(""); 
+      setAba("ativas");
+    } catch (err) {
+      alert("Erro ao salvar macro no Agendador:\n\n" + err);
+    }
   };
 
   const editarMacro = (m: Macro) => {
-    setEditId(m.id); setCaminhoBat(m.caminho_bat); setHorario(m.horario); setAoIniciar(m.ao_iniciar); setAba("form");
+    setEditId(m.id); 
+    setCaminhoBat(m.caminho_bat); 
+    setHorario(m.horario); 
+    setAoIniciar(m.ao_iniciar); 
+    setAba("form");
   };
 
   const acaoMacro = async (id: string, acao: "lixeira" | "definitivo" | "restaurar", m?: Macro) => {
-    if (acao === "restaurar" && m) {
-      await invoke("salvar_macro", { id: m.id, caminhoBat: m.caminho_bat, horario: m.horario, aoIniciar: m.ao_iniciar });
-    } else {
-      await invoke("deletar_macro", { id, definitivo: acao === "definitivo" });
+    try {
+      if (acao === "restaurar" && m) {
+        await invoke("salvar_macro", { id: m.id, caminhoBat: m.caminho_bat, horario: m.horario, aoIniciar: m.ao_iniciar });
+      } else {
+        await invoke("deletar_macro", { id, definitivo: acao === "definitivo" });
+      }
+      carregarMacros();
+    } catch (err) {
+      alert("Erro na operação da macro: " + err);
     }
-    carregarMacros();
   };
 
-  // NOVA FUNÇÃO: Aciona o backend para testar a macro na hora
   const testarMacro = async (caminhoBat: string) => {
     try {
       await invoke("executar_macro_agora", { caminhoBat });
@@ -78,8 +104,13 @@ function App() {
       <h1 style={{ marginBottom: "1rem" }}>Agendador de Macros</h1>
       
       <div className="autostart-toggle">
-        <input type="checkbox" id="auto" checked={iniciarComWindows} onChange={(e) => handleToggleWindows(e.target.checked)} />
-        <label htmlFor="auto">Iniciar Gerenciador oculto com o Windows (Admin)</label>
+        <input 
+          type="checkbox" 
+          id="admin-autostart-checkbox" 
+          checked={iniciarComWindows} 
+          onChange={(e) => handleToggleWindows(e.target.checked)} 
+        />
+        <label htmlFor="admin-autostart-checkbox">Iniciar Gerenciador oculto com o Windows (Admin)</label>
       </div>
 
       <div className="tabs">
@@ -124,4 +155,5 @@ function App() {
     </main>
   );
 }
+
 export default App;
