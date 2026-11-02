@@ -11,9 +11,9 @@
 ## Imagens do projeto ```macro-win``` aberto no Windows 11:
 
 <br>
-
-<img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_01.png" alt="Texto alternativo" width="500" height="250"> <img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_02.png" alt="Texto alternativo" width="500" height="250">
-
+<img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_01.png" alt="Texto alternativo" width="500" height="250">
+<br>
+<img src="https://github.com/mateuslph/macro-win/blob/main/public/micro-win_02.png" alt="Texto alternativo" width="500" height="250">
 <br> <br>
 
 ## 🚀 Funcionalidades Principais
